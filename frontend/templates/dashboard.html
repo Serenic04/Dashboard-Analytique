@@ -1,0 +1,785 @@
+''
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Analytique - Sessions Médicales</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      font-weight: 600;
+    }
+    .subtitle {
+      margin: 4px 0 0;
+      color: #9ca3af;
+      font-size: 0.9rem;
+    }
+    .filters-section {
+      background: radial-gradient(circle at top left, #1e293b, #020617);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .filter-label {
+      font-size: 0.85rem;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    select, input {
+      background: #1e293b;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #e5e7eb;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    select:hover, input:hover {
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+    select:focus, input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .filter-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+    button {
+      background: #3b82f6;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      color: white;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+    }
+    button.secondary {
+      background: #475569;
+    }
+    button.secondary:hover {
+      background: #64748b;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .card {
+      background: radial-gradient(circle at top left, #1e293b, #020617);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+    }
+    .card-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+    .card-value {
+      font-size: 2rem;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+    .card-subtitle {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 4px;
+    }
+    .charts-section {
+      margin-bottom: 32px;
+    }
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #e5e7eb;
+    }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    .chart-card {
+      background: radial-gradient(circle at top left, #020617, #020617);
+      border-radius: 18px;
+      padding: 24px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8);
+    }
+    .chart-title {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #d1d5db;
+      margin-bottom: 16px;
+    }
+    canvas {
+      max-height: 400px;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #9ca3af;
+    }
+    .error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      color: #fca5a5;
+      margin: 16px 0;
+    }
+    @media (max-width: 768px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+      .filters-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div>
+        <h1>Dashboard Analytique - Sessions Médicales</h1>
+        <p class="subtitle">
+          Analyse complète des sessions : durée, notes, qualité, interactions et répartition
+        </p>
+      </div>
+    </header>
+
+    <section class="filters-section">
+      <div class="filters-grid" id="filters-container">
+        <div class="filter-group">
+          <label class="filter-label">Service</label>
+          <select id="filter-service">
+            <option value="all">Tous les services</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Langue</label>
+          <select id="filter-langue">
+            <option value="all">Toutes les langues</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Device</label>
+          <select id="filter-device">
+            <option value="all">Tous les devices</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Date début</label>
+          <input type="date" id="filter-date-debut" />
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Date fin</label>
+          <input type="date" id="filter-date-fin" />
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button class="secondary" onclick="resetFilters()">Réinitialiser</button>
+        <button onclick="applyFilters()">Appliquer les filtres</button>
+      </div>
+    </section>
+
+    <div id="loading" class="loading">Chargement des données...</div>
+    <div id="error-container"></div>
+
+    <section id="dashboard-content" style="display: none;">
+      <section class="card-grid" id="kpi-cards"></section>
+
+      <div class="charts-section">
+        <h2 class="section-title">Évolution et Répartition</h2>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">Évolution du nombre de sessions</div>
+            <canvas id="evolutionChart"></canvas>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Répartition par service</div>
+            <canvas id="serviceChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-section">
+        <h2 class="section-title">Top des Langues</h2>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">Top 10 des langues (classement)</div>
+            <canvas id="topLanguesChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-section">
+        <h2 class="section-title">Durée Moyenne</h2>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">Durée moyenne par service</div>
+            <canvas id="durationServiceChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-section">
+        <h2 class="section-title">Indicateurs de Qualité</h2>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">Indicateurs de qualité</div>
+            <div id="qualiteIndicators" style="padding: 20px; color: #e5e7eb;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-section">
+        <h2 class="section-title">Interactions Patient/Praticien</h2>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">Comparaison des interactions</div>
+            <canvas id="interactionsChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-section">
+        <h2 class="section-title">Notes Praticiens</h2>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">Distribution des notes</div>
+            <canvas id="notesChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let charts = {};
+    let currentData = null;
+
+    // Configuration des couleurs
+    const colors = {
+      primary: "rgba(59, 130, 246, 0.9)",
+      secondary: "rgba(16, 185, 129, 0.9)",
+      accent: "rgba(234, 179, 8, 0.9)",
+      danger: "rgba(239, 68, 68, 0.9)",
+      purple: "rgba(168, 85, 247, 0.9)",
+      pink: "rgba(236, 72, 153, 0.9)",
+      chartColors: [
+        "rgba(59, 130, 246, 0.9)",
+        "rgba(16, 185, 129, 0.9)",
+        "rgba(234, 179, 8, 0.9)",
+        "rgba(239, 68, 68, 0.9)",
+        "rgba(168, 85, 247, 0.9)",
+        "rgba(236, 72, 153, 0.9)",
+        "rgba(251, 146, 60, 0.9)",
+        "rgba(14, 165, 233, 0.9)",
+        "rgba(34, 197, 94, 0.9)",
+        "rgba(249, 115, 22, 0.9)",
+      ]
+    };
+
+    async function fetchFilters() {
+      try {
+        const res = await fetch("/api/filters");
+        if (!res.ok) throw new Error("Erreur lors du chargement des filtres");
+        return await res.json();
+      } catch (error) {
+        showError("Impossible de charger les options de filtres : " + error.message);
+        return null;
+      }
+    }
+
+    async function fetchStats() {
+      const params = new URLSearchParams();
+      
+      const service = document.getElementById("filter-service").value;
+      const langue = document.getElementById("filter-langue").value;
+      const device = document.getElementById("filter-device").value;
+      const dateDebut = document.getElementById("filter-date-debut").value;
+      const dateFin = document.getElementById("filter-date-fin").value;
+      
+      if (service !== "all") params.append("service", service);
+      if (langue !== "all") params.append("langue", langue);
+      if (device !== "all") params.append("device", device);
+      if (dateDebut) params.append("date_debut", dateDebut);
+      if (dateFin) params.append("date_fin", dateFin);
+      
+      try {
+        const res = await fetch("/api/stats?" + params.toString());
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || "Erreur API");
+        }
+        return await res.json();
+      } catch (error) {
+        showError("Erreur lors du chargement des données : " + error.message);
+        return null;
+      }
+    }
+
+    function showError(message) {
+      const container = document.getElementById("error-container");
+      container.innerHTML = `<div class="error">${message}</div>`;
+    }
+
+    function formatNumber(n) {
+      return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n);
+    }
+
+    function formatDecimal(n, decimals = 1) {
+      return new Intl.NumberFormat("fr-FR", { 
+        maximumFractionDigits: decimals,
+        minimumFractionDigits: decimals 
+      }).format(n);
+    }
+
+    function updateKPIs(data) {
+      const kpis = data.kpis;
+      const container = document.getElementById("kpi-cards");
+      
+      container.innerHTML = `
+        <div class="card">
+          <div class="card-title">Sessions totales</div>
+          <div class="card-value">${formatNumber(kpis.total_sessions)}</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Durée moyenne</div>
+          <div class="card-value">${formatDecimal(kpis.avg_duration)} min</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Note moyenne praticien</div>
+          <div class="card-value">${formatDecimal(kpis.avg_note, 2)}</div>
+          <div class="card-subtitle">sur 5.0</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Score qualité moyen</div>
+          <div class="card-value">${formatDecimal(kpis.avg_qualite, 3)}</div>
+          <div class="card-subtitle">sur 1.0</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Interactions moyennes</div>
+          <div class="card-value">${formatDecimal(kpis.avg_interactions)}</div>
+          <div class="card-subtitle">Total</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Interactions patient</div>
+          <div class="card-value">${formatDecimal(kpis.avg_interactions_patient)}</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Interactions praticien</div>
+          <div class="card-value">${formatDecimal(kpis.avg_interactions_praticien)}</div>
+        </div>
+      `;
+    }
+
+    function destroyChart(name) {
+      if (charts[name]) {
+        charts[name].destroy();
+        delete charts[name];
+      }
+    }
+
+    function createEvolutionChart(data) {
+      destroyChart("evolution");
+      if (!data.time_series || data.time_series.length === 0) return;
+      
+      const ctx = document.getElementById("evolutionChart").getContext("2d");
+      charts.evolution = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: data.time_series.map(d => d.month),
+          datasets: [
+            {
+              label: "Nombre de sessions",
+              data: data.time_series.map(d => d.count),
+              borderColor: colors.primary,
+              backgroundColor: "rgba(59, 130, 246, 0.2)",
+              tension: 0.4,
+              fill: true,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: "#e5e7eb" } },
+          },
+          scales: {
+            x: {
+              ticks: { color: "#9ca3af" },
+              grid: { color: "rgba(55, 65, 81, 0.6)" },
+            },
+            y: {
+              ticks: { color: "#9ca3af" },
+              grid: { color: "rgba(55, 65, 81, 0.6)" },
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+    }
+
+    function createServiceChart(data) {
+      destroyChart("service");
+      const ctx = document.getElementById("serviceChart").getContext("2d");
+      charts.service = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: data.sessions_by_service.map(d => d.service),
+          datasets: [{
+            label: "Nombre de sessions",
+            data: data.sessions_by_service.map(d => d.count),
+            backgroundColor: colors.chartColors,
+            borderRadius: 6,
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+          },
+          scales: {
+            x: {
+              ticks: { color: "#9ca3af" },
+              grid: { display: false },
+            },
+            y: {
+              ticks: { color: "#9ca3af" },
+              grid: { color: "rgba(55, 65, 81, 0.6)" },
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+    }
+
+    function createTopLanguesChart(data) {
+      destroyChart("topLangues");
+      const ctx = document.getElementById("topLanguesChart").getContext("2d");
+      const topData = data.top_langues.slice(0, 10);
+      
+      charts.topLangues = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: topData.map((d, i) => `#${i + 1} ${d.langue}`),
+          datasets: [{
+            label: "Sessions",
+            data: topData.map(d => d.count),
+            backgroundColor: colors.chartColors,
+            borderRadius: 6,
+          }],
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+          },
+          scales: {
+            x: {
+              ticks: { color: "#9ca3af" },
+              grid: { color: "rgba(55, 65, 81, 0.6)" },
+              beginAtZero: true,
+            },
+            y: {
+              ticks: { color: "#9ca3af" },
+              grid: { display: false },
+            },
+          },
+        },
+      });
+    }
+
+    function createDurationServiceChart(data) {
+      destroyChart("durationService");
+      const ctx = document.getElementById("durationServiceChart").getContext("2d");
+      
+      charts.durationService = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: data.duration_by_service.map(d => d.service),
+          datasets: [{
+            label: "Durée moyenne (min)",
+            data: data.duration_by_service.map(d => d.avg_duration),
+            backgroundColor: colors.accent,
+            borderRadius: 6,
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+          },
+          scales: {
+            x: {
+              ticks: { color: "#9ca3af" },
+              grid: { display: false },
+            },
+            y: {
+              ticks: { color: "#9ca3af", callback: (v) => v + " min" },
+              grid: { color: "rgba(55, 65, 81, 0.6)" },
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+    }
+
+    function createInteractionsChart(data) {
+      destroyChart("interactions");
+      const ctx = document.getElementById("interactionsChart").getContext("2d");
+      const breakdown = data.interactions_breakdown;
+      
+      charts.interactions = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ["Patient", "Praticien", "Total"],
+          datasets: [{
+            label: "Interactions moyennes",
+            data: [
+              breakdown.avg_patient,
+              breakdown.avg_praticien,
+              breakdown.avg_totales
+            ],
+            backgroundColor: [colors.primary, colors.secondary, colors.accent],
+            borderRadius: 6,
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+          },
+          scales: {
+            x: {
+              ticks: { color: "#9ca3af" },
+              grid: { display: false },
+            },
+            y: {
+              ticks: { color: "#9ca3af" },
+              grid: { color: "rgba(55, 65, 81, 0.6)" },
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+    }
+
+    function createNotesChart(data) {
+      destroyChart("notes");
+      if (!data.notes_distribution || data.notes_distribution.length === 0) return;
+      
+      const ctx = document.getElementById("notesChart").getContext("2d");
+      charts.notes = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: data.notes_distribution.map(d => d.note_range || "N/A"),
+          datasets: [{
+            label: "Nombre de sessions",
+            data: data.notes_distribution.map(d => d.count),
+            backgroundColor: colors.chartColors,
+            borderRadius: 6,
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+          },
+          scales: {
+            x: {
+              ticks: { color: "#9ca3af" },
+              grid: { display: false },
+            },
+            y: {
+              ticks: { color: "#9ca3af" },
+              grid: { color: "rgba(55, 65, 81, 0.6)" },
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+    }
+
+    function updateQualiteIndicators(data) {
+      const indicators = data.qualite_indicators;
+      const container = document.getElementById("qualiteIndicators");
+      
+      container.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+          <div>
+            <div style="font-size: 0.85rem; color: #9ca3af; margin-bottom: 8px;">Score moyen</div>
+            <div style="font-size: 1.8rem; font-weight: 600;">${formatDecimal(indicators.avg_qualite_score, 3)}</div>
+            <div style="font-size: 0.75rem; color: #64748b;">sur 1.0</div>
+          </div>
+          <div>
+            <div style="font-size: 0.85rem; color: #9ca3af; margin-bottom: 8px;">Sessions haute qualité</div>
+            <div style="font-size: 1.8rem; font-weight: 600; color: #10b981;">${formatNumber(indicators.sessions_haute_qualite)}</div>
+            <div style="font-size: 0.75rem; color: #64748b;">≥ 0.9</div>
+          </div>
+          <div>
+            <div style="font-size: 0.85rem; color: #9ca3af; margin-bottom: 8px;">Sessions basse qualité</div>
+            <div style="font-size: 1.8rem; font-weight: 600; color: #ef4444;">${formatNumber(indicators.sessions_basse_qualite)}</div>
+            <div style="font-size: 0.75rem; color: #64748b;">< 0.8</div>
+          </div>
+          <div>
+            <div style="font-size: 0.85rem; color: #9ca3af; margin-bottom: 8px;">Segments non reconnus</div>
+            <div style="font-size: 1.8rem; font-weight: 600;">${formatDecimal(indicators.avg_segments_non_reconnus, 1)}</div>
+            <div style="font-size: 0.75rem; color: #64748b;">moyenne</div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function initDashboard() {
+      document.getElementById("loading").style.display = "block";
+      document.getElementById("dashboard-content").style.display = "none";
+      document.getElementById("error-container").innerHTML = "";
+      
+      // Charger les filtres
+      const filters = await fetchFilters();
+      if (filters) {
+        populateFilters(filters);
+      }
+      
+      // Charger les données
+      const data = await fetchStats();
+      if (!data || data.error) {
+        document.getElementById("loading").style.display = "none";
+        return;
+      }
+      
+      currentData = data;
+      
+      // Mettre à jour l'interface
+      updateKPIs(data);
+      
+      // Créer tous les graphiques
+      createEvolutionChart(data);
+      createServiceChart(data);
+      createTopLanguesChart(data);
+      createDurationServiceChart(data);
+      updateQualiteIndicators(data);
+      createInteractionsChart(data);
+      createNotesChart(data);
+      
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("dashboard-content").style.display = "block";
+    }
+
+    function populateFilters(filters) {
+      const serviceSelect = document.getElementById("filter-service");
+      const langueSelect = document.getElementById("filter-langue");
+      const deviceSelect = document.getElementById("filter-device");
+      const dateDebut = document.getElementById("filter-date-debut");
+      const dateFin = document.getElementById("filter-date-fin");
+      
+      // Services
+      filters.services.forEach(s => {
+        const option = document.createElement("option");
+        option.value = s;
+        option.textContent = s;
+        serviceSelect.appendChild(option);
+      });
+      
+      // Langues
+      filters.langues.forEach(l => {
+        const option = document.createElement("option");
+        option.value = l;
+        option.textContent = l;
+        langueSelect.appendChild(option);
+      });
+      
+      // Devices
+      filters.devices.forEach(d => {
+        const option = document.createElement("option");
+        option.value = d;
+        option.textContent = d;
+        deviceSelect.appendChild(option);
+      });
+      
+      // Dates
+      if (filters.date_min) dateDebut.min = filters.date_min;
+      if (filters.date_max) dateDebut.max = filters.date_max;
+      if (filters.date_min) dateFin.min = filters.date_min;
+      if (filters.date_max) dateFin.max = filters.date_max;
+    }
+
+    function applyFilters() {
+      initDashboard();
+    }
+
+    function resetFilters() {
+      document.getElementById("filter-service").value = "all";
+      document.getElementById("filter-langue").value = "all";
+      document.getElementById("filter-device").value = "all";
+      document.getElementById("filter-date-debut").value = "";
+      document.getElementById("filter-date-fin").value = "";
+      initDashboard();
+    }
+
+    // Initialisation au chargement de la page
+    initDashboard();
+  </script>
+</body>
+</html>
