@@ -45,16 +45,11 @@ Application complète de dashboard analytique pour visualiser et analyser des se
 Dans un terminal à la racine du projet :
 
 ```bash
-# Créer l'environnement virtuel (si pas déjà fait)
+# Créer le venv 
 python -m venv .venv
 
-# Activer l'environnement virtuel
-# Windows PowerShell :
+# Activer le venv sur Windows PowerShell - CORRECTEMENT
 .venv\Scripts\Activate.ps1
-# Windows CMD :
-.venv\Scripts\activate.bat
-# Linux/Mac :
-source .venv/bin/activate
 
 # Installer les dépendances
 pip install -r requirements.txt
