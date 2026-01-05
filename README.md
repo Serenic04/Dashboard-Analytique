@@ -24,13 +24,6 @@ Application complète de dashboard analytique pour visualiser et analyser des se
 - ✅ **Notes praticiens** : Distribution des notes avec graphique barres
 
 ### Fonctionnalités Avancées
-
-- ✅ **Filtres interactifs** :
-  - Filtrage par service médical
-  - Filtrage par langue
-  - Filtrage par device (mobile/webapp)
-  - Filtrage par plage de dates (début/fin)
-  - Bouton de réinitialisation des filtres
   
 - ✅ **Interface claire** :
   - Design moderne et professionnel (thème sombre)
